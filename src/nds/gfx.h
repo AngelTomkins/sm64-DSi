@@ -1,3 +1,6 @@
+// C-Button Graphics provided by:
+// Cid <cid.rva@gmail.com>
+
 // Global pointer to sprite vram
 extern int sprite_head_gfx;
 
