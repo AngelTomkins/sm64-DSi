@@ -42,6 +42,9 @@ static void update_audio(void) {
 }
 
 int main(void) {
+
+    background_sub_init();
+
     static u64 pool[0x165000 / sizeof(u64)];
     main_pool_init(pool, pool + sizeof(pool) / sizeof(pool[0]));
     gEffectsMemoryPool = mem_pool_init(0x4000, MEMORY_POOL_LEFT);

@@ -6,6 +6,10 @@
 
 #include "nds_renderer.h"
 
+// Graphics data for the joysticks
+#include "nds/gfx.h"
+int sprite_head_gfx;
+
 struct Color {
     uint8_t r, g, b, a;
 };
@@ -1024,7 +1028,7 @@ static void count_frames() {
 void renderer_init() {
     // Set up the screens
     videoSetMode(MODE_0_3D);
-    consoleDemoInit();
+    //consoleDemoInit();
 
     // Initialize the 3D renderer
     glInit();
@@ -1105,4 +1109,62 @@ void draw_frame(Gfx *display_list) {
 
     // Reset the frame counter
     frame_count = 0;
+}
+
+
+// Background Sub Screen Impl
+void background_sub_init() {
+    // Enable the bottom screen background
+    videoSetModeSub(MODE_0_2D);
+    vramSetBankH(VRAM_H_SUB_BG);
+    vramSetBankI(VRAM_I_SUB_SPRITE);
+
+    int bg = bgInitSub(0, BgType_Text8bpp, BgSize_T_256x256, 0, 1);
+
+    decompress(bottom_screenTiles, bgGetGfxPtr(bg), LZ77Vram);
+    decompress(bottom_screenMap, bgGetMapPtr(bg), LZ77Vram);
+    decompress(bottom_screenPal, BG_PALETTE_SUB, LZ77Vram);
+
+    oamInit(&oamSub, SpriteMapping_1D_32, false);
+
+    dmaCopy(joysticksPal, SPRITE_PALETTE_SUB, joysticksPalLen);
+
+    sprite_head_gfx = oamAllocateGfx(&oamSub, SpriteSize_64x64, SpriteColorFormat_256Color);
+    dmaCopy(joysticksTiles+1024, sprite_head_gfx, 64*64);
+
+    oamSet(&oamSub,
+        0,
+        96, 64,
+        0,
+        0,
+        SpriteSize_64x64,
+        SpriteColorFormat_256Color,
+        sprite_head_gfx,
+        -1,
+        false,
+        false,
+        false, false,
+        false
+      );
+
+    int sprite_base_gfx = oamAllocateGfx(&oamSub, SpriteSize_64x64, SpriteColorFormat_256Color);
+    dmaCopy(joysticksTiles, sprite_base_gfx, 64*64);
+
+    oamSet(&oamSub,
+        1,
+        96, 64,
+        0,
+        0,
+        SpriteSize_64x64,
+        SpriteColorFormat_256Color,
+        sprite_base_gfx,
+        -1,
+        false,
+        false,
+        false, false,
+        false
+
+      );
+    oamUpdate(&oamSub);
+
 }
