@@ -81,6 +81,10 @@ static uint16_t fog_max;
 static int no_texture;
 static int frame_count;
 
+static Vtx_t* vertex_batch[32 * 3];
+static uint8_t num_verts_batched = 0;
+
+
 struct Sprite sprites[MAX_SPRITES];
 
 struct {
@@ -468,26 +472,20 @@ static void g_vtx(Gwords *words) {
 }
 
 static void g_tri1(Gwords *words) {
-    // Draw a triangle
-    const Vtx_t *v[] = {
-        &vertex_buffer[((words->w0 >> 16) & 0xFF) >> 1].v,
-        &vertex_buffer[((words->w0 >>  8) & 0xFF) >> 1].v,
-        &vertex_buffer[((words->w0 >>  0) & 0xFF) >> 1].v
-    };
-    draw_vertices(v, 3);
+    // Batch a triangle to render
+    vertex_batch[num_verts_batched++] = &vertex_buffer[((words->w0 >> 16) & 0xFF) >> 1].v;
+    vertex_batch[num_verts_batched++] = &vertex_buffer[((words->w0 >>  8) & 0xFF) >> 1].v;
+    vertex_batch[num_verts_batched++] = &vertex_buffer[((words->w0 >>  0) & 0xFF) >> 1].v;
 }
 
 static void g_tri2(Gwords *words) {
-    // Draw two triangles at once
-    const Vtx_t *v[] = {
-        &vertex_buffer[((words->w0 >> 16) & 0xFF) >> 1].v,
-        &vertex_buffer[((words->w0 >>  8) & 0xFF) >> 1].v,
-        &vertex_buffer[((words->w0 >>  0) & 0xFF) >> 1].v,
-        &vertex_buffer[((words->w1 >> 16) & 0xFF) >> 1].v,
-        &vertex_buffer[((words->w1 >>  8) & 0xFF) >> 1].v,
-        &vertex_buffer[((words->w1 >>  0) & 0xFF) >> 1].v
-    };
-    draw_vertices(v, 6);
+    // Batch triangles to render
+    vertex_batch[num_verts_batched++] = &vertex_buffer[((words->w0 >> 16) & 0xFF) >> 1].v;
+    vertex_batch[num_verts_batched++] = &vertex_buffer[((words->w0 >>  8) & 0xFF) >> 1].v;
+    vertex_batch[num_verts_batched++] = &vertex_buffer[((words->w0 >>  0) & 0xFF) >> 1].v;
+    vertex_batch[num_verts_batched++] = &vertex_buffer[((words->w1 >> 16) & 0xFF) >> 1].v;
+    vertex_batch[num_verts_batched++] = &vertex_buffer[((words->w1 >>  8) & 0xFF) >> 1].v;
+    vertex_batch[num_verts_batched++] = &vertex_buffer[((words->w1 >>  0) & 0xFF) >> 1].v;
 }
 
 static void g_texture(Gwords *words) {
@@ -938,6 +936,12 @@ static void execute(Gfx* cmd) {
     // Interpret a list of Fast3DEX2 commands using the DS hardware
     while (true) {
         const uint8_t opcode = cmd->words.w0 >> 24;
+
+        // Draw the batched verticies
+        if ((opcode != G_TRI1 && opcode != G_TRI2 && num_verts_batched > 0) || num_verts_batched >= 90) {
+            draw_vertices(vertex_batch, num_verts_batched);
+            num_verts_batched = 0;
+        }
 
         switch (opcode) {
             case G_VTX:            g_vtx(&cmd->words);            break;
