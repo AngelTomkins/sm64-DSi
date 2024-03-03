@@ -10,6 +10,8 @@
 #include "stick_base_1.h"
 #include "stick_base_2.h"
 
+#define BATCH_SIZE 96
+
 struct Color {
     uint8_t r, g, b, a;
 };
@@ -81,9 +83,8 @@ static uint16_t fog_max;
 static int no_texture;
 static int frame_count;
 
-static Vtx_t* vertex_batch[32 * 3];
-static uint8_t num_verts_batched = 0;
-
+static Vtx_t *vertex_batch[BATCH_SIZE];
+static uint8_t batch_count;
 
 struct Sprite sprites[MAX_SPRITES];
 
@@ -473,19 +474,19 @@ static void g_vtx(Gwords *words) {
 
 static void g_tri1(Gwords *words) {
     // Batch a triangle to render
-    vertex_batch[num_verts_batched++] = &vertex_buffer[((words->w0 >> 16) & 0xFF) >> 1].v;
-    vertex_batch[num_verts_batched++] = &vertex_buffer[((words->w0 >>  8) & 0xFF) >> 1].v;
-    vertex_batch[num_verts_batched++] = &vertex_buffer[((words->w0 >>  0) & 0xFF) >> 1].v;
+    vertex_batch[batch_count++] = &vertex_buffer[((words->w0 >> 16) & 0xFF) >> 1].v;
+    vertex_batch[batch_count++] = &vertex_buffer[((words->w0 >>  8) & 0xFF) >> 1].v;
+    vertex_batch[batch_count++] = &vertex_buffer[((words->w0 >>  0) & 0xFF) >> 1].v;
 }
 
 static void g_tri2(Gwords *words) {
-    // Batch triangles to render
-    vertex_batch[num_verts_batched++] = &vertex_buffer[((words->w0 >> 16) & 0xFF) >> 1].v;
-    vertex_batch[num_verts_batched++] = &vertex_buffer[((words->w0 >>  8) & 0xFF) >> 1].v;
-    vertex_batch[num_verts_batched++] = &vertex_buffer[((words->w0 >>  0) & 0xFF) >> 1].v;
-    vertex_batch[num_verts_batched++] = &vertex_buffer[((words->w1 >> 16) & 0xFF) >> 1].v;
-    vertex_batch[num_verts_batched++] = &vertex_buffer[((words->w1 >>  8) & 0xFF) >> 1].v;
-    vertex_batch[num_verts_batched++] = &vertex_buffer[((words->w1 >>  0) & 0xFF) >> 1].v;
+    // Batch two triangles to render
+    vertex_batch[batch_count++] = &vertex_buffer[((words->w0 >> 16) & 0xFF) >> 1].v;
+    vertex_batch[batch_count++] = &vertex_buffer[((words->w0 >>  8) & 0xFF) >> 1].v;
+    vertex_batch[batch_count++] = &vertex_buffer[((words->w0 >>  0) & 0xFF) >> 1].v;
+    vertex_batch[batch_count++] = &vertex_buffer[((words->w1 >> 16) & 0xFF) >> 1].v;
+    vertex_batch[batch_count++] = &vertex_buffer[((words->w1 >>  8) & 0xFF) >> 1].v;
+    vertex_batch[batch_count++] = &vertex_buffer[((words->w1 >>  0) & 0xFF) >> 1].v;
 }
 
 static void g_texture(Gwords *words) {
@@ -937,10 +938,10 @@ static void execute(Gfx* cmd) {
     while (true) {
         const uint8_t opcode = cmd->words.w0 >> 24;
 
-        // Draw the batched verticies
-        if ((opcode != G_TRI1 && opcode != G_TRI2 && num_verts_batched > 0) || num_verts_batched >= 90) {
-            draw_vertices(vertex_batch, num_verts_batched);
-            num_verts_batched = 0;
+        // Draw the batched vertices
+        if ((opcode != G_TRI1 && opcode != G_TRI2 && batch_count > 0) || batch_count > BATCH_SIZE - 6) {
+            draw_vertices(vertex_batch, batch_count);
+            batch_count = 0;
         }
 
         switch (opcode) {
