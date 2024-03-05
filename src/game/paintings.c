@@ -191,8 +191,6 @@ struct Painting **sPaintingGroups[] = {
 s16 gPaintingUpdateCounter = 1;
 s16 gLastPaintingUpdateCounter = 0;
 
-//struct FixedPainting* fixedPainting;
-
 /**
  * Stop paintings in paintingGroup from rippling if their id is different from *idptr.
  */
