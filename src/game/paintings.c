@@ -1,5 +1,7 @@
 #include <PR/ultratypes.h>
 
+#include "../nds/nds_include.h"
+
 #include "sm64.h"
 #include "area.h"
 #include "engine/graph_node.h"
@@ -188,6 +190,8 @@ struct Painting **sPaintingGroups[] = {
 
 s16 gPaintingUpdateCounter = 1;
 s16 gLastPaintingUpdateCounter = 0;
+
+//struct FixedPainting* fixedPainting;
 
 /**
  * Stop paintings in paintingGroup from rippling if their id is different from *idptr.
@@ -615,37 +619,42 @@ void painting_update_ripple_state(struct Painting *painting) {
  * @return the ripple function at posX, posY
  * note that posX and posY correspond to a point on the face of the painting, not actual axes
  */
-s16 calculate_ripple_at_point(struct Painting *painting, f32 posX, f32 posY) {
+s16 calculate_ripple_at_point(struct FixedPainting *fixedPainting, f32 posX, f32 posY) {
     /// Controls the peaks of the ripple.
-    f32 rippleMag = painting->currRippleMag;
+    s32 rippleMag = fixedPainting->currRippleMag;
     /// Controls the ripple's frequency
-    f32 rippleRate = painting->currRippleRate;
+    s32 rippleRate = fixedPainting->currRippleRate;
     /// Controls how fast the ripple spreads
-    f32 dispersionFactor = painting->dispersionFactor;
+    s32 dispersionFactor = fixedPainting->dispersionFactor;
     /// How far the ripple has spread
-    f32 rippleTimer = painting->rippleTimer;
+    s32 rippleTimer = fixedPainting->rippleTimer;
     /// x and y ripple origin
-    f32 rippleX = painting->rippleX;
-    f32 rippleY = painting->rippleY;
+    s32 rippleX = fixedPainting->rippleX;
+    s32 rippleY = fixedPainting->rippleY;
 
-    f32 distanceToOrigin;
-    f32 rippleDistance;
+    s32 distanceToOrigin;
+    s32 rippleDistance;
 
-    posX *= painting->size / PAINTING_SIZE;
-    posY *= painting->size / PAINTING_SIZE;
-    distanceToOrigin = sqrtf((posX - rippleX) * (posX - rippleX) + (posY - rippleY) * (posY - rippleY));
+    s32 sposX = (floattof32(posX) * ((fixedPainting->size) / floattof32(PAINTING_SIZE)));
+    s32 sposY = (floattof32(posY) * ((fixedPainting->size) / floattof32(PAINTING_SIZE)));
+
+    distanceToOrigin = sqrtf32(mulf32((sposX - rippleX), (sposX - rippleX))
+                                                  + mulf32((sposY - rippleY), (sposY - rippleY)));
+
     // A larger dispersionFactor makes the ripple spread slower
-    rippleDistance = distanceToOrigin / dispersionFactor;
+    rippleDistance = (distanceToOrigin<<12) / dispersionFactor;
     if (rippleTimer < rippleDistance) {
         // if the ripple hasn't reached the point yet, make the point magnitude 0
         return 0;
     } else {
         // use a cosine wave to make the ripple go up and down,
         // scaled by the painting's ripple magnitude
-        f32 rippleZ = rippleMag * cosf(rippleRate * (2 * M_PI) * (rippleTimer - rippleDistance));
+        s16 angle = (mulf32(rippleRate, (rippleTimer - rippleDistance))*DEGREES_IN_CIRCLE) >> 12;
+        s32 value = cosLerp(angle);
+        f32 rippleZ = mulf32(rippleMag, value);
 
         // round it to an int and return it
-        return round_float(rippleZ);
+        return f32toint(rippleZ);
     }
 }
 
@@ -683,6 +692,14 @@ s16 ripple_if_movable(struct Painting *painting, s16 movable, s16 posX, s16 posY
  */
 void painting_generate_mesh(struct Painting *painting, s16 *mesh, s16 numTris) {
     s16 i;
+    struct FixedPainting fixed_painting;
+    fixed_painting.currRippleMag = floattof32(painting->currRippleMag);
+    fixed_painting.currRippleRate = floattof32(painting->currRippleRate);
+    fixed_painting.dispersionFactor = floattof32(painting->dispersionFactor);
+    fixed_painting.rippleTimer = floattof32(painting->rippleTimer);
+    fixed_painting.rippleX = floattof32(painting->rippleX);
+    fixed_painting.rippleY = floattof32(painting->rippleY);
+    fixed_painting.size = floattof32(painting->size);
 
     gPaintingMesh = mem_pool_alloc(gEffectsMemoryPool, numTris * sizeof(struct PaintingMeshVertex));
     if (gPaintingMesh == NULL) {
@@ -693,7 +710,7 @@ void painting_generate_mesh(struct Painting *painting, s16 *mesh, s16 numTris) {
         gPaintingMesh[i].pos[1] = mesh[i * 3 + 2];
         // The "z coordinate" of each vertex in the mesh is either 1 or 0. Instead of being an
         // actual coordinate, it just determines whether the vertex moves
-        gPaintingMesh[i].pos[2] = ripple_if_movable(painting, mesh[i * 3 + 3],
+        gPaintingMesh[i].pos[2] = ripple_if_movable(&fixed_painting, mesh[i * 3 + 3],
                                                     gPaintingMesh[i].pos[0], gPaintingMesh[i].pos[1]);
     }
 }

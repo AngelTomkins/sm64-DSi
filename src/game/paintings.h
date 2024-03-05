@@ -116,6 +116,16 @@ struct Painting {
     f32 size;
 };
 
+struct FixedPainting {
+    s32 currRippleMag;
+    s32 currRippleRate;
+    s32 dispersionFactor;
+    s32 rippleTimer;
+    s32 rippleX;
+    s32 rippleY;
+    s32 size;
+};
+
 /**
  * Contains the position and normal of a vertex in the painting's generated mesh.
  */
