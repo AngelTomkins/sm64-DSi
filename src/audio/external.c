@@ -13,6 +13,12 @@
 #include "seq_ids.h"
 #include "dialog_ids.h"
 
+#ifdef TARGET_NDS
+#define NDS_ITCM_CODE __attribute__((section(".itcm")))
+#else
+#define NDS_ITCM_CODE
+#endif
+
 #if defined(VERSION_EU) || defined(VERSION_SH)
 #define EU_FLOAT(x) x##f
 #else
@@ -825,7 +831,7 @@ void play_sound(s32 soundBits, f32 *pos) {
 /**
  * Called from threads: thread4_sound, thread5_game_loop (EU only)
  */
-static void process_sound_request(u32 bits, f32 *pos) {
+NDS_ITCM_CODE static void process_sound_request(u32 bits, f32 *pos) {
     u8 bank;
     u8 soundIndex;
     u8 counter = 0;
@@ -914,7 +920,7 @@ static void process_sound_request(u32 bits, f32 *pos) {
  *
  * Called from threads: thread4_sound, thread5_game_loop (EU only)
  */
-static void process_all_sound_requests(void) {
+NDS_ITCM_CODE static void process_all_sound_requests(void) {
     struct Sound *sound;
 
     while (sSoundRequestCount != sNumProcessedSoundRequests) {
@@ -949,7 +955,7 @@ static void delete_sound_from_bank(u8 bank, u8 soundIndex) {
 /**
  * Called from threads: thread3_main, thread4_sound, thread5_game_loop
  */
-static void update_background_music_after_sound(u8 bank, u8 soundIndex) {
+NDS_ITCM_CODE static void update_background_music_after_sound(u8 bank, u8 soundIndex) {
     if (sSoundBanks[bank][soundIndex].soundBits & SOUND_LOWER_BACKGROUND_MUSIC) {
         sSoundBanksThatLowerBackgroundMusic &= (1 << bank) ^ 0xffff;
         begin_background_music_fade(50);
@@ -959,7 +965,7 @@ static void update_background_music_after_sound(u8 bank, u8 soundIndex) {
 /**
  * Called from threads: thread4_sound, thread5_game_loop (EU only)
  */
-static void select_current_sounds(u8 bank) {
+NDS_ITCM_CODE static void select_current_sounds(u8 bank) {
     u32 isDiscreteAndStatus;
     u8 latestSoundIndex;
     u8 i;
@@ -1164,7 +1170,7 @@ static void select_current_sounds(u8 bank) {
  *
  * Called from threads: thread4_sound, thread5_game_loop (EU only)
  */
-static f32 get_sound_pan(f32 x, f32 z) {
+NDS_ITCM_CODE static f32 get_sound_pan(f32 x, f32 z) {
     f32 absX;
     f32 absZ;
     f32 pan;
@@ -1209,7 +1215,7 @@ static f32 get_sound_pan(f32 x, f32 z) {
 /**
  * Called from threads: thread4_sound, thread5_game_loop (EU only)
  */
-static f32 get_sound_volume(u8 bank, u8 soundIndex, f32 volumeRange) {
+NDS_ITCM_CODE static f32 get_sound_volume(u8 bank, u8 soundIndex, f32 volumeRange) {
     f32 maxSoundDistance;
     f32 intensity;
 #ifndef VERSION_JP
@@ -1266,7 +1272,7 @@ static f32 get_sound_volume(u8 bank, u8 soundIndex, f32 volumeRange) {
 /**
  * Called from threads: thread4_sound, thread5_game_loop (EU only)
  */
-static f32 get_sound_freq_scale(u8 bank, u8 item) {
+NDS_ITCM_CODE static f32 get_sound_freq_scale(u8 bank, u8 item) {
     f32 amount;
 
     if (!(sSoundBanks[bank][item].soundBits & SOUND_CONSTANT_FREQUENCY)) {
@@ -1286,7 +1292,7 @@ static f32 get_sound_freq_scale(u8 bank, u8 item) {
 /**
  * Called from threads: thread4_sound, thread5_game_loop (EU only)
  */
-static u8 get_sound_reverb(UNUSED u8 bank, UNUSED u8 soundIndex, u8 channelIndex) {
+NDS_ITCM_CODE static u8 get_sound_reverb(UNUSED u8 bank, UNUSED u8 soundIndex, u8 channelIndex) {
     u8 area;
     u8 level;
     u8 reverb;
@@ -1341,7 +1347,7 @@ void audio_signal_game_loop_tick(void) {
 /**
  * Called from threads: thread4_sound, thread5_game_loop (EU and SH only)
  */
-void update_game_sound(void) {
+NDS_ITCM_CODE void update_game_sound(void) {
     u8 soundStatus;
     u8 i;
     u8 soundId;
@@ -1853,7 +1859,7 @@ static void func_8031F96C(u8 player) {
 /**
  * Called from threads: thread4_sound, thread5_game_loop (EU only)
  */
-void process_level_music_dynamics(void) {
+NDS_ITCM_CODE void process_level_music_dynamics(void) {
     u32 conditionBits;
     u16 tempBits;
     UNUSED u16 pad;
@@ -2059,7 +2065,7 @@ void seq_player_unlower_volume(u8 player, u16 fadeDuration) {
  *
  * Called from threads: thread3_main, thread4_sound, thread5_game_loop
  */
-static u8 begin_background_music_fade(u16 fadeDuration) {
+NDS_ITCM_CODE static u8 begin_background_music_fade(u16 fadeDuration) {
     u8 targetVolume = 0xff;
 
     if (sCurrentBackgroundMusicSeqId == SEQUENCE_NONE

@@ -15,6 +15,12 @@
 #define PORTAMENTO_MODE_4 4
 #define PORTAMENTO_MODE_5 5
 
+#ifdef TARGET_NDS
+#define NDS_ITCM_CODE __attribute__((section(".itcm")))
+#else
+#define NDS_ITCM_CODE
+#endif
+
 #ifdef VERSION_SH
 void seq_channel_layer_process_script_part1(struct SequenceChannelLayer *layer);
 s32 seq_channel_layer_process_script_part2(struct SequenceChannelLayer *layer);
@@ -2222,7 +2228,7 @@ void sequence_channel_process_script(struct SequenceChannel *seqChannel) {
     }
 }
 
-void sequence_player_process_sequence(struct SequencePlayer *seqPlayer) {
+NDS_ITCM_CODE void sequence_player_process_sequence(struct SequencePlayer *seqPlayer) {
     u8 cmd;
 #ifdef VERSION_SH
     UNUSED u32 pad;
@@ -2728,7 +2734,7 @@ void sequence_player_process_sequence(struct SequencePlayer *seqPlayer) {
 }
 
 // This runs 240 times per second.
-void process_sequences(UNUSED s32 iterationsRemaining) {
+NDS_ITCM_CODE void process_sequences(UNUSED s32 iterationsRemaining) {
     s32 i;
     for (i = 0; i < SEQUENCE_PLAYERS; i++) {
         if (gSequencePlayers[i].enabled == TRUE) {

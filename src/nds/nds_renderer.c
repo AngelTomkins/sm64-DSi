@@ -30,61 +30,61 @@ struct Light {
     uint8_t r, g, b;
 };
 
-static struct Color fill_color;
-static struct Color fog_color;
-static struct Color env_color;
+DTCM_BSS static struct Color fill_color;
+DTCM_BSS static struct Color fog_color;
+DTCM_BSS static struct Color env_color;
 
-static Vtx vertex_buffer[16];
+DTCM_BSS static Vtx vertex_buffer[16];
 static struct Texture texture_map[2048];
-static struct Light lights[5];
+DTCM_BSS static struct Light lights[5];
 
 static uint16_t texture_fifo[2048];
 static uint16_t texture_fifo_start;
 static uint16_t texture_fifo_end;
 
 static uint8_t *texture_address;
-static uint8_t texture_format;
-static uint8_t texture_bit_width;
-static uint16_t texture_row_size;
-static uint16_t texture_size;
-static uint16_t texture_scale_s;
-static uint16_t texture_scale_t;
+DTCM_BSS static uint8_t texture_format;
+DTCM_BSS static uint8_t texture_bit_width;
+DTCM_BSS static uint16_t texture_row_size;
+DTCM_BSS static uint16_t texture_size;
+DTCM_BSS static uint16_t texture_scale_s;
+DTCM_BSS static uint16_t texture_scale_t;
 
-static uint32_t geometry_mode;
-static uint32_t rdphalf_1;
-static uint32_t other_mode_l;
-static uint32_t other_mode_h;
-static Gwords texrect;
+DTCM_BSS static uint32_t geometry_mode;
+DTCM_BSS static uint32_t rdphalf_1;
+DTCM_BSS static uint32_t other_mode_l;
+DTCM_BSS static uint32_t other_mode_h;
+DTCM_BSS static Gwords texrect;
 
-static uint8_t *z_buffer;
-static uint8_t *c_buffer;
+DTCM_BSS static uint8_t *z_buffer;
+DTCM_BSS static uint8_t *c_buffer;
 
-static bool texture_dirty;
-static bool lights_dirty;
-static int num_lights;
+DTCM_BSS static bool texture_dirty;
+DTCM_BSS static bool lights_dirty;
+DTCM_BSS static int num_lights;
 
-static int polygon_id;
-static int poly_fmt;
-static int tex_params;
+DTCM_BSS static int polygon_id;
+DTCM_BSS static int poly_fmt;
+DTCM_BSS static int tex_params;
 
-static bool use_color;
-static bool use_texture;
-static bool use_env_color;
-static bool use_env_alpha;
+DTCM_BSS static bool use_color;
+DTCM_BSS static bool use_texture;
+DTCM_BSS static bool use_env_color;
+DTCM_BSS static bool use_env_alpha;
 
-static bool shrunk;
-static bool background;
-static int32_t z_depth;
+DTCM_BSS static bool shrunk;
+DTCM_BSS static bool background;
+DTCM_BSS static int32_t z_depth;
 
-static uint8_t fog_status;
-static uint16_t fog_min;
-static uint16_t fog_max;
+DTCM_BSS static uint8_t fog_status;
+DTCM_BSS static uint16_t fog_min;
+DTCM_BSS static uint16_t fog_max;
 
-static int no_texture;
-static int frame_count;
+DTCM_BSS static int no_texture;
+DTCM_BSS static int frame_count;
 
-static Vtx_t *vertex_batch[BATCH_SIZE];
-static uint8_t batch_count;
+DTCM_BSS static Vtx_t *vertex_batch[BATCH_SIZE];
+DTCM_BSS static uint8_t batch_count;
 
 struct Sprite sprites[MAX_SPRITES];
 
@@ -252,7 +252,7 @@ static void load_texture() {
     texture_fifo_start = (texture_fifo_start + 1) & 0x7FF;
 }
 
-static void draw_vertices(const Vtx_t **v, int count) {
+ITCM_CODE static void draw_vertices(const Vtx_t **v, int count) {
     // Get the alpha value and return early if it's 0 (alpha 0 is wireframe on the DS)
     // Since the DS only supports one alpha value per polygon, just use the one from first vertex
     const int alpha = ((other_mode_l & (G_BL_A_MEM << 18)) ? 31 : ((use_env_alpha ? env_color.a : v[0]->cn[3]) >> 3));
@@ -338,10 +338,26 @@ static void draw_vertices(const Vtx_t **v, int count) {
             }
         } else {
             // Send the vertices normally
-            for (int i = 0; i < count; i++) {
-                if (use_color) glColor3b(v[i]->cn[0], v[i]->cn[1], v[i]->cn[2]);
-                if (use_texture) glTexCoord2t16(((v[i]->tc[0] * texture_scale_s) >> 17) + tex_ofs, ((v[i]->tc[1] * texture_scale_t) >> 17) + tex_ofs);
-                glVertex3v16(v[i]->ob[0], v[i]->ob[1], v[i]->ob[2]);
+            if (__builtin_expect((use_color), true)) {
+                if (use_texture) {
+                    for (int i = 0; i < count; i++) {
+                        glColor3b(v[i]->cn[0], v[i]->cn[1], v[i]->cn[2]);
+                        glTexCoord2t16(((v[i]->tc[0] * texture_scale_s) >> 17) + tex_ofs, ((v[i]->tc[1] * texture_scale_t) >> 17) + tex_ofs);
+                        glVertex3v16(v[i]->ob[0], v[i]->ob[1], v[i]->ob[2]);
+                    }
+                } else {
+                    for (int i = 0; i < count; i++) {
+                        glColor3b(v[i]->cn[0], v[i]->cn[1], v[i]->cn[2]);
+                        glVertex3v16(v[i]->ob[0], v[i]->ob[1], v[i]->ob[2]);
+                    }
+                }
+            }  else {
+                if (use_texture) {
+                    for (int i = 0; i < count; i++) {
+                        glTexCoord2t16(((v[i]->tc[0] * texture_scale_s) >> 17) + tex_ofs, ((v[i]->tc[1] * texture_scale_t) >> 17) + tex_ofs);
+                        glVertex3v16(v[i]->ob[0], v[i]->ob[1], v[i]->ob[2]);
+                    }
+                }
             }
         }
 
@@ -404,7 +420,7 @@ static void draw_vertices(const Vtx_t **v, int count) {
     }
 }
 
-static void g_vtx(Gwords *words) {
+ITCM_CODE static void g_vtx(Gwords *words) {
     const uint8_t count = ((words->w0 >> 12) & 0xFF);
     const uint8_t index = ((words->w0 >>  0) & 0xFF) >> 1;
     const Vtx *vertices = (const Vtx*)words->w1;
@@ -472,14 +488,14 @@ static void g_vtx(Gwords *words) {
     }
 }
 
-static void g_tri1(Gwords *words) {
+ITCM_CODE static void g_tri1(Gwords *words) {
     // Batch a triangle to render
     vertex_batch[batch_count++] = &vertex_buffer[((words->w0 >> 16) & 0xFF) >> 1].v;
     vertex_batch[batch_count++] = &vertex_buffer[((words->w0 >>  8) & 0xFF) >> 1].v;
     vertex_batch[batch_count++] = &vertex_buffer[((words->w0 >>  0) & 0xFF) >> 1].v;
 }
 
-static void g_tri2(Gwords *words) {
+ITCM_CODE static void g_tri2(Gwords *words) {
     // Batch two triangles to render
     vertex_batch[batch_count++] = &vertex_buffer[((words->w0 >> 16) & 0xFF) >> 1].v;
     vertex_batch[batch_count++] = &vertex_buffer[((words->w0 >>  8) & 0xFF) >> 1].v;
@@ -515,7 +531,7 @@ static void g_geometrymode(Gwords *words) {
     }
 }
 
-static void g_mtx(Gwords *words) {
+ITCM_CODE static void g_mtx(Gwords *words) {
     // Load a matrix with 16-bit fractionals
     m4x4 matrix;
     for (int i = 0; i < 16; i += 2) {
@@ -620,7 +636,7 @@ static void g_moveword(Gwords *words) {
     }
 }
 
-static void g_movemem(Gwords *words) {
+ITCM_CODE static void g_movemem(Gwords *words) {
     // Set a block of values that are normally at specific locations in DMEM
     const uint8_t index = (words->w0 >> 0) & 0xFF;
     switch (index) {
@@ -688,7 +704,7 @@ static void g_texrect(Gwords *words) {
     texrect = *words;
 }
 
-static void g_rdphalf_2(Gwords *words) {
+ITCM_CODE static void g_rdphalf_2(Gwords *words) {
     // G_TEXRECT is actually performed here; the texture coordinates must be set in the RDP word before it can begin
 
     // Get the alpha value and return early if it's 0 (alpha 0 is wireframe on the DS)
@@ -933,7 +949,7 @@ static void g_setcimg(Gwords *words) {
     c_buffer = (uint8_t*)words->w1;
 }
 
-static void execute(Gfx* cmd) {
+ITCM_CODE static void execute(Gfx* cmd) {
     // Interpret a list of Fast3DEX2 commands using the DS hardware
     while (true) {
         const uint8_t opcode = cmd->words.w0 >> 24;
