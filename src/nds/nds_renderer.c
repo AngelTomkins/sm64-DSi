@@ -351,7 +351,7 @@ ITCM_CODE static void draw_vertices(const Vtx_t **v, int count) {
                         glVertex3v16(v[i]->ob[0], v[i]->ob[1], v[i]->ob[2]);
                     }
                 }
-            }  else {
+            } else {
                 if (use_texture) {
                     for (int i = 0; i < count; i++) {
                         glTexCoord2t16(((v[i]->tc[0] * texture_scale_s) >> 17) + tex_ofs, ((v[i]->tc[1] * texture_scale_t) >> 17) + tex_ofs);
