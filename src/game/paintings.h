@@ -116,6 +116,7 @@ struct Painting {
     f32 size;
 };
 
+#ifdef TARGET_NDS
 struct FixedPainting {
     s32 currRippleMag;
     s32 currRippleRate;
@@ -125,6 +126,7 @@ struct FixedPainting {
     s32 rippleY;
     s32 size;
 };
+#endif
 
 /**
  * Contains the position and normal of a vertex in the painting's generated mesh.
